@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
+from app.core.auth import get_current_user
 from app.crud import inventory as inventory_crud
 from app.schemas.inventory import Inventory, InventoryCreate, InventoryUpdate
+from app.schemas.user import User
 from typing import List
 
 router = APIRouter(prefix="/api/inventory", tags=["inventory"])
@@ -17,12 +19,12 @@ def get_db():
 
 
 @router.post("/", response_model=Inventory)
-def create_inventory_item(item: InventoryCreate, db: Session = Depends(get_db)):
+def create_inventory_item(item: InventoryCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return inventory_crud.create_inventory_item(db=db, item=item)
 
 
 @router.get("/{inventory_id}", response_model=Inventory)
-def read_inventory_item(inventory_id: int, db: Session = Depends(get_db)):
+def read_inventory_item(inventory_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_item = inventory_crud.get_inventory_item(db, inventory_id=inventory_id)
     if db_item is None:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -30,13 +32,13 @@ def read_inventory_item(inventory_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=list[Inventory])
-def read_inventory_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_inventory_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     items = inventory_crud.get_inventory_items(db, skip=skip, limit=limit)
     return items
 
 
 @router.put("/{inventory_id}", response_model=Inventory)
-def update_inventory_item(inventory_id: int, item_update: InventoryUpdate, db: Session = Depends(get_db)):
+def update_inventory_item(inventory_id: int, item_update: InventoryUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_item = inventory_crud.update_inventory_item(db, inventory_id=inventory_id, item_update=item_update)
     if db_item is None:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -44,7 +46,7 @@ def update_inventory_item(inventory_id: int, item_update: InventoryUpdate, db: S
 
 
 @router.delete("/{inventory_id}", response_model=Inventory)
-def delete_inventory_item(inventory_id: int, db: Session = Depends(get_db)):
+def delete_inventory_item(inventory_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_item = inventory_crud.delete_inventory_item(db, inventory_id=inventory_id)
     if db_item is None:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -52,7 +54,7 @@ def delete_inventory_item(inventory_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{inventory_id}/stock/in")
-def add_stock(inventory_id: int, quantity: int, db: Session = Depends(get_db)):
+def add_stock(inventory_id: int, quantity: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     # In a real application, you would check if the user has permission to modify stock
     if quantity <= 0:
         raise HTTPException(status_code=400, detail="Quantity must be positive")
@@ -63,7 +65,7 @@ def add_stock(inventory_id: int, quantity: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{inventory_id}/stock/out")
-def remove_stock(inventory_id: int, quantity: int, db: Session = Depends(get_db)):
+def remove_stock(inventory_id: int, quantity: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     # In a real application, you would check if the user has permission to modify stock
     if quantity <= 0:
         raise HTTPException(status_code=400, detail="Quantity must be positive")

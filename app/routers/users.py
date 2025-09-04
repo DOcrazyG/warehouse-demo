@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
+from app.core.auth import get_current_user
 from app.crud import user as user_crud
-from app.schemas.user import User, UserCreate, UserUpdate, UserLogin, Token
+from app.schemas.user import User, UserCreate, UserUpdate, UserLogin
+from app.schemas.token import Token
 from app.utils.security import verify_password
 from typing import List
 
@@ -18,7 +20,7 @@ def get_db():
 
 
 @router.post("/", response_model=User)
-def create_user(user: UserCreate, db: Session = Depends(get_db)):
+def create_user(user: UserCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_user = user_crud.get_user_by_username(db, username=user.username)
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
@@ -29,7 +31,7 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/{user_id}", response_model=User)
-def read_user(user_id: int, db: Session = Depends(get_db)):
+def read_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_user = user_crud.get_user(db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -37,13 +39,13 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=List[User])
-def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     users = user_crud.get_users(db, skip=skip, limit=limit)
     return users
 
 
 @router.put("/{user_id}", response_model=User)
-def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db)):
+def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_user = user_crud.update_user(db, user_id=user_id, user_update=user_update)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -51,7 +53,7 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
 
 
 @router.delete("/{user_id}", response_model=User)
-def delete_user(user_id: int, db: Session = Depends(get_db)):
+def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_user = user_crud.delete_user(db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
