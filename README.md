@@ -30,6 +30,7 @@ A backend demo for warehouse management system built with Python, FastAPI, SQLAl
 - Database: PostgreSQL
 - Web Framework: FastAPI
 - ORM Library: SQLAlchemy
+- Template Engine: Jinja2
 
 ## Installation
 
@@ -67,6 +68,13 @@ uvicorn app.main:app --reload
 
 The API will be available at `http://localhost:8000`
 
+## Web Interface
+
+The application now includes a simple web interface using Jinja2 templates:
+- Home page: `http://localhost:8000/`
+- Users page: `http://localhost:8000/users`
+- Inventory page: `http://localhost:8000/inventory`
+
 ## API Documentation
 
 Once the application is running, you can access the API documentation at:
@@ -82,5 +90,7 @@ app/
 ├── models/         # Database models
 ├── routers/        # API routes
 ├── schemas/        # Pydantic models for data validation
+├── templates/      # Jinja2 templates for web interface
+├── static/         # Static files (CSS, JS, images)
 └── utils/          # Utility functions
 ```

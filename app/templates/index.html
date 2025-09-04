@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="jumbotron">
+            <h1 class="display-4">Welcome to Warehouse Management System</h1>
+            <p class="lead">This is a demo application for managing warehouse inventory.</p>
+            <hr class="my-4">
+            <p>Use the navigation bar to access different parts of the system.</p>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">User Management</h5>
+                <p class="card-text">Manage users, roles and permissions.</p>
+                <a href="/users" class="btn btn-primary">Go to Users</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Inventory Management</h5>
+                <p class="card-text">Manage warehouse inventory items.</p>
+                <a href="/inventory" class="btn btn-primary">Go to Inventory</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Reports</h5>
+                <p class="card-text">View warehouse reports and analytics.</p>
+                <a href="#" class="btn btn-primary disabled">Go to Reports</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
