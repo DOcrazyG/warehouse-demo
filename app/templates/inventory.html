@@ -5,7 +5,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1>Inventory</h1>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">Add Item</button>
+    <button class="btn btn-primary" id="addItemButton" data-bs-toggle="modal" data-bs-target="#addItemModal" style="display: none;">Add Item</button>
 </div>
 
 <table class="table table-striped">
@@ -30,8 +30,10 @@
             <td>${{ "%.2f"|format(item.price) }}</td>
             <td>{{ item.category or '' }}</td>
             <td>
-                <button class="btn btn-sm btn-outline-primary">Edit</button>
-                <button class="btn btn-sm btn-outline-danger">Delete</button>
+                <button class="btn btn-sm btn-outline-primary edit-item" data-id="{{ item.id }}">Edit</button>
+                <button class="btn btn-sm btn-outline-danger delete-item" data-id="{{ item.id }}">Delete</button>
+                <button class="btn btn-sm btn-outline-success stock-in" data-id="{{ item.id }}" style="display: none;">Stock In</button>
+                <button class="btn btn-sm btn-outline-warning stock-out" data-id="{{ item.id }}" style="display: none;">Stock Out</button>
             </td>
         </tr>
         {% endfor %}
@@ -47,6 +49,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <div id="itemErrorMessage" class="alert alert-danger" style="display: none;"></div>
                 <form id="addItemForm">
                     <div class="mb-3">
                         <label for="name" class="form-label">Name</label>
@@ -78,14 +81,165 @@
     </div>
 </div>
 
+<!-- Stock In/Out Modal -->
+<div class="modal fade" id="stockModal" tabindex="-1" aria-labelledby="stockModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="stockModalLabel">Update Stock</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="stockErrorMessage" class="alert alert-danger" style="display: none;"></div>
+                <form id="stockForm">
+                    <input type="hidden" id="stockItemId">
+                    <div class="mb-3">
+                        <label for="stockQuantity" class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="stockQuantity" name="quantity" min="1" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="updateStockBtn">Update Stock</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
+    // Check if user is admin to show admin features
+    document.addEventListener('DOMContentLoaded', function() {
+        const isLoggedIn = localStorage.getItem('isLoggedIn');
+        const username = localStorage.getItem('username');
+        
+        if (isLoggedIn === 'true') {
+            // All logged in users can see inventory
+            // Show admin-only buttons only for admin users
+            if (username === 'admin') {
+                document.querySelectorAll('.stock-in, .stock-out, #addItemButton').forEach(element => {
+                    element.style.display = 'inline-block';
+                });
+            }
+        }
+    });
+    
     document.getElementById('saveItemBtn').addEventListener('click', function() {
-        // In a real application, this would send data to the backend
-        alert('In a real application, this would save the item to the database.');
-        bootstrap.Modal.getInstance(document.getElementById('addItemModal')).hide();
+        const formData = {
+            name: document.getElementById('name').value,
+            description: document.getElementById('description').value,
+            quantity: parseInt(document.getElementById('quantity').value),
+            price: parseFloat(document.getElementById('price').value),
+            category: document.getElementById('category').value
+        };
+        
+        const errorMessage = document.getElementById('itemErrorMessage');
+        errorMessage.style.display = 'none';
+        
+        // Send item creation request to backend
+        fetch('/api/inventory/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                return response.json().then(err => {
+                    throw new Error(err.detail || 'Failed to create item');
+                });
+            }
+        })
+        .then(data => {
+            // Close modal and refresh page to show new item
+            bootstrap.Modal.getInstance(document.getElementById('addItemModal')).hide();
+            location.reload();
+        })
+        .catch(error => {
+            errorMessage.textContent = error.message;
+            errorMessage.style.display = 'block';
+        });
+    });
+    
+    // Stock In/Out button handlers
+    document.querySelectorAll('.stock-in').forEach(button => {
+        button.addEventListener('click', function() {
+            const itemId = this.getAttribute('data-id');
+            document.getElementById('stockItemId').value = itemId;
+            document.getElementById('stockModalLabel').textContent = 'Stock In';
+            document.getElementById('updateStockBtn').className = 'btn btn-success';
+            document.getElementById('updateStockBtn').textContent = 'Add Stock';
+            document.getElementById('stockQuantity').value = '';
+            document.getElementById('stockErrorMessage').style.display = 'none';
+            bootstrap.Modal.getInstance(document.getElementById('stockModal')).show();
+        });
+    });
+    
+    document.querySelectorAll('.stock-out').forEach(button => {
+        button.addEventListener('click', function() {
+            const itemId = this.getAttribute('data-id');
+            document.getElementById('stockItemId').value = itemId;
+            document.getElementById('stockModalLabel').textContent = 'Stock Out';
+            document.getElementById('updateStockBtn').className = 'btn btn-warning';
+            document.getElementById('updateStockBtn').textContent = 'Remove Stock';
+            document.getElementById('stockQuantity').value = '';
+            document.getElementById('stockErrorMessage').style.display = 'none';
+            bootstrap.Modal.getInstance(document.getElementById('stockModal')).show();
+        });
+    });
+    
+    document.getElementById('updateStockBtn').addEventListener('click', function() {
+        const itemId = document.getElementById('stockItemId').value;
+        const quantity = parseInt(document.getElementById('stockQuantity').value);
+        const isStockIn = document.getElementById('updateStockBtn').classList.contains('btn-success');
+        const errorMessage = document.getElementById('stockErrorMessage');
+        
+        errorMessage.style.display = 'none';
+        
+        if (isNaN(quantity) || quantity <= 0) {
+            errorMessage.textContent = 'Please enter a valid quantity';
+            errorMessage.style.display = 'block';
+            return;
+        }
+        
+        const endpoint = isStockIn ? 
+            `/api/inventory/${itemId}/stock/in` : 
+            `/api/inventory/${itemId}/stock/out`;
+            
+        // Send stock update request to backend
+        fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            body: JSON.stringify({ quantity: quantity })
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                return response.json().then(err => {
+                    throw new Error(err.detail || 'Failed to update stock');
+                });
+            }
+        })
+        .then(data => {
+            // Close modal and refresh page to show updated stock
+            bootstrap.Modal.getInstance(document.getElementById('stockModal')).hide();
+            location.reload();
+        })
+        .catch(error => {
+            errorMessage.textContent = error.message;
+            errorMessage.style.display = 'block';
+        });
     });
 </script>
 {% endblock %}

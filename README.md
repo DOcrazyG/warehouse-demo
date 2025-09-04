@@ -24,6 +24,10 @@ A backend demo for warehouse management system built with Python, FastAPI, SQLAl
    - Stock in (add quantity)
    - Stock out (remove quantity)
 
+4. Role-Based Access Control
+   - Regular users can only view inventory
+   - Admin users can manage users and inventory (stock in/out)
+
 ## Technology Stack
 
 - Programming Language: Python
@@ -70,10 +74,18 @@ The API will be available at `http://localhost:8000`
 
 ## Web Interface
 
-The application now includes a simple web interface using Jinja2 templates:
+The application includes a web interface using Jinja2 templates:
 - Home page: `http://localhost:8000/`
-- Users page: `http://localhost:8000/users`
+- Login page: `http://localhost:8000/login`
+- Registration page: `http://localhost:8000/register`
+- Users page (admin only): `http://localhost:8000/users`
 - Inventory page: `http://localhost:8000/inventory`
+
+## Authentication and Authorization
+
+- Regular users can only view inventory information after logging in
+- Admin users (like 'admin') can manage users and perform stock operations
+- In a real application, authentication would be implemented with proper session management or JWT tokens
 
 ## API Documentation
 
@@ -92,5 +104,6 @@ app/
 ├── schemas/        # Pydantic models for data validation
 ├── templates/      # Jinja2 templates for web interface
 ├── static/         # Static files (CSS, JS, images)
-└── utils/          # Utility functions
+├── utils/          # Utility functions
+└── main.py         # Main application file
 ```

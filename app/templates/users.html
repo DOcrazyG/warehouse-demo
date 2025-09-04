@@ -4,37 +4,43 @@
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1>Users</h1>
+    <h1>Users Management</h1>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">Add User</button>
 </div>
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Username</th>
-            <th>Email</th>
-            <th>First Name</th>
-            <th>Last Name</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for user in users %}
-        <tr>
-            <td>{{ user.id }}</td>
-            <td>{{ user.username }}</td>
-            <td>{{ user.email }}</td>
-            <td>{{ user.first_name or '' }}</td>
-            <td>{{ user.last_name or '' }}</td>
-            <td>
-                <button class="btn btn-sm btn-outline-primary">Edit</button>
-                <button class="btn btn-sm btn-outline-danger">Delete</button>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="alert alert-warning" id="accessDenied" style="display: none;">
+    <strong>Access Denied!</strong> You don't have permission to view this page.
+</div>
+
+<div id="usersContent" style="display: none;">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.id }}</td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.first_name or '' }}</td>
+                <td>{{ user.last_name or '' }}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary edit-user" data-id="{{ user.id }}">Edit</button>
+                    <button class="btn btn-sm btn-outline-danger delete-user" data-id="{{ user.id }}">Delete</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
 <!-- Add User Modal -->
 <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
@@ -45,6 +51,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <div id="userErrorMessage" class="alert alert-danger" style="display: none;"></div>
                 <form id="addUserForm">
                     <div class="mb-3">
                         <label for="username" class="form-label">Username</label>
@@ -80,10 +87,59 @@
 
 {% block scripts %}
 <script>
+    // Check if user is admin
+    document.addEventListener('DOMContentLoaded', function() {
+        const isLoggedIn = localStorage.getItem('isLoggedIn');
+        const username = localStorage.getItem('username');
+        
+        if (isLoggedIn === 'true' && username === 'admin') {
+            // Show users content for admin
+            document.getElementById('usersContent').style.display = 'block';
+        } else {
+            // Show access denied message
+            document.getElementById('accessDenied').style.display = 'block';
+        }
+    });
+    
     document.getElementById('saveUserBtn').addEventListener('click', function() {
-        // In a real application, this would send data to the backend
-        alert('In a real application, this would save the user to the database.');
-        bootstrap.Modal.getInstance(document.getElementById('addUserModal')).hide();
+        const formData = {
+            username: document.getElementById('username').value,
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value,
+            first_name: document.getElementById('first_name').value,
+            last_name: document.getElementById('last_name').value
+        };
+        
+        const errorMessage = document.getElementById('userErrorMessage');
+        errorMessage.style.display = 'none';
+        
+        // Send user creation request to backend
+        fetch('/api/users/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                return response.json().then(err => {
+                    throw new Error(err.detail || 'Failed to create user');
+                });
+            }
+        })
+        .then(data => {
+            // Close modal and refresh page to show new user
+            bootstrap.Modal.getInstance(document.getElementById('addUserModal')).hide();
+            location.reload();
+        })
+        .catch(error => {
+            errorMessage.textContent = error.message;
+            errorMessage.style.display = 'block';
+        });
     });
 </script>
 {% endblock %}

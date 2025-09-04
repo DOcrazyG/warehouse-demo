@@ -3,8 +3,9 @@ from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.crud import inventory as inventory_crud
 from app.schemas.inventory import Inventory, InventoryCreate, InventoryUpdate
+from typing import List
 
-router = APIRouter(prefix="/inventory", tags=["inventory"])
+router = APIRouter(prefix="/api/inventory", tags=["inventory"])
 
 
 def get_db():
@@ -17,7 +18,6 @@ def get_db():
 
 @router.post("/", response_model=Inventory)
 def create_inventory_item(item: InventoryCreate, db: Session = Depends(get_db)):
-    # In a real application, you would check if the user has permission to create inventory items
     return inventory_crud.create_inventory_item(db=db, item=item)
 
 
